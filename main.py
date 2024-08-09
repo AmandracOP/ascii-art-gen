@@ -1,154 +1,96 @@
-# Python code to convert an image to ASCII image.
-import sys, random, argparse
+import argparse
 import numpy as np
 import math
+from PIL import Image, ImageDraw, ImageFont
 
-from PIL import Image
+chars = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. "[::-1]
+charArray = list(chars)
+charLength = len(charArray)
+interval = charLength / 256
 
-# gray scale level values from: 
-# http://paulbourke.net/dataformats/asciiart/
+oneCharWidth = 16
+oneCharHeight = 24
 
-# 70 levels of gray
-gscale1 = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
-
-# 10 levels of gray
-gscale2 = '@%#*+=-:. '
+def getChar(inputInt):
+    return charArray[math.floor(inputInt * interval)]
 
 def getAverageL(image):
+    im = np.array(image)
+    w, h = im.shape
+    return np.average(im.reshape(w * h))
 
-	"""
-	Given PIL Image, return average value of grayscale value
-	"""
-	# get image as numpy array
-	im = np.array(image)
+def convertImageToAscii(imgFile, cols, scale, moreLevels):
+    image = Image.open(imgFile)
+    W, H = image.size
+    w = W / cols
+    h = w / scale
+    rows = int(H / h)
 
-	# get shape
-	w,h = im.shape
+    if cols > W or rows > H:
+        print("Image too small for specified cols!")
+        exit(0)
 
-	# get average
-	return np.average(im.reshape(w*h))
+    aimg = []
 
-def covertImageToAscii(fileName, cols, scale, moreLevels):
-	"""
-	Given Image and dims (rows, cols) returns an m*n list of Images 
-	"""
-	# declare globals
-	global gscale1, gscale2
+    try:
+        fnt = ImageFont.truetype("arial.ttf", 15)  
+    except IOError:
+        fnt = ImageFont.load_default()  
 
-	# open image and convert to grayscale
-	image = Image.open(fileName).convert('L')
+    image = image.resize((int(scale * W), int(scale * H * (oneCharWidth / oneCharHeight))), Image.NEAREST)
+    pix = image.load()
 
-	# store dimensions
-	W, H = image.size[0], image.size[1]
-	print("input image dims: %d x %d" % (W, H))
+    outputImage = Image.new('RGB', (oneCharWidth * cols, oneCharHeight * rows), color=(0, 0, 0))
+    d = ImageDraw.Draw(outputImage)
 
-	# compute width of tile
-	w = W/cols
+    for j in range(rows):
+        y1 = int(j * h)
+        y2 = int((j + 1) * h)
+        if j == rows - 1:
+            y2 = H
 
-	# compute tile height based on aspect ratio and scale
-	h = w/scale
+        aimg.append("")
 
-	# compute number of rows
-	rows = int(H/h)
-	
-	print("cols: %d, rows: %d" % (cols, rows))
-	print("tile dims: %d x %d" % (w, h))
+        for i in range(cols):
+            x1 = int(i * w)
+            x2 = int((i + 1) * w)
+            if i == cols - 1:
+                x2 = W
 
-	# check if image size is too small
-	if cols > W or rows > H:
-		print("Image too small for specified cols!")
-		exit(0)
+            img = image.crop((x1, y1, x2, y2)).convert("L")  
+            avg = int(getAverageL(img))
 
-	# ascii image is a list of character strings
-	aimg = []
-	# generate list of dimensions
-	for j in range(rows):
-		y1 = int(j*h)
-		y2 = int((j+1)*h)
+            r, g, b = pix[i, j]
+            gsval = getChar(avg)
+            aimg[j] += gsval
+            d.text((i * oneCharWidth, j * oneCharHeight), gsval, font=fnt, fill=(r, g, b))
 
-		# correct last tile
-		if j == rows-1:
-			y2 = H
+    return aimg, outputImage
 
-		# append an empty string
-		aimg.append("")
-
-		for i in range(cols):
-
-			# crop image to tile
-			x1 = int(i*w)
-			x2 = int((i+1)*w)
-
-			# correct last tile
-			if i == cols-1:
-				x2 = W
-
-			# crop image to extract tile
-			img = image.crop((x1, y1, x2, y2))
-
-			# get average luminance
-			avg = int(getAverageL(img))
-
-			# look up ascii char
-			if moreLevels:
-				gsval = gscale1[int((avg*69)/255)]
-			else:
-				gsval = gscale2[int((avg*9)/255)]
-
-			# append ascii char to string
-			aimg[j] += gsval
-	
-	# return txt image
-	return aimg
-
-# main() function
 def main():
-	# create parser
-	descStr = "This program converts an image into ASCII art."
-	parser = argparse.ArgumentParser(description=descStr)
-	# add expected arguments
-	parser.add_argument('--file', dest='imgFile', required=True)
-	parser.add_argument('--scale', dest='scale', required=False)
-	parser.add_argument('--out', dest='outFile', required=False)
-	parser.add_argument('--cols', dest='cols', required=False)
-	parser.add_argument('--morelevels',dest='moreLevels',action='store_true')
+    parser = argparse.ArgumentParser(description="This program converts an image into ASCII art with color grading.")
+    parser.add_argument('--file', dest='imgFile', required=True)
+    parser.add_argument('--scale', dest='scale', required=False)
+    parser.add_argument('--out', dest='outFile', required=False)
+    parser.add_argument('--cols', dest='cols', required=True)
+    parser.add_argument('--morelevels', dest='moreLevels', action='store_true')
 
-	# parse args
-	args = parser.parse_args()
+    args = parser.parse_args()
 
-	imgFile = args.imgFile
+    imgFile = args.imgFile
+    outFile = args.outFile if args.outFile else 'out.txt'
+    scale = float(args.scale) if args.scale else 0.43
+    cols = int(args.cols) if args.cols else 80
 
-	# set output file
-	outFile = 'out.txt'
-	if args.outFile:
-		outFile = args.outFile
+    print('Generating ASCII art...')
+    aimg, outputImage = convertImageToAscii(imgFile, cols, scale, args.moreLevels)
 
-	# set scale default as 0.43 which suits
-	# a Courier font
-	scale = 0.43
-	if args.scale:
-		scale = float(args.scale)
+    with open(outFile, 'w') as f:
+        for row in aimg:
+            f.write(row + '\n')
 
-	# set cols
-	cols = 80
-	if args.cols:
-		cols = int(args.cols)
+    outputImage.save('output.png')
+    print(f"ASCII art written to {outFile} and saved as output.png")
 
-	print('generating ASCII art...')
-	# convert image to ascii txt
-	aimg = covertImageToAscii(imgFile, cols, scale, args.moreLevels)
-
-	# open file
-	f = open(outFile, 'w')
-
-	# write to file
-	for row in aimg:
-		f.write(row + '\n')
-
-	# cleanup
-	f.close()
-	print("ASCII art written to %s" % outFile)
-
-# call main
 if __name__ == '__main__':
-	main()
+    main()
