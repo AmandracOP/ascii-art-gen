@@ -1,22 +1,59 @@
 ﻿# ascii-art-gen
+
 ## To use this file:
-1. run these commands
-   ```
+
+1. Clone the repository:
+
+   ```bash
    git clone https://github.com/AmandracOP/ascii-art-gen.git
-  ```
 
-  ```cd ascii-art-gen ```
-   ``` python -m venv navenv```
+    Navigate to the project directory:
 
-For windows
+    bash
 
-   ```navenv/Scripts/activate```
+cd ascii-art-gen
 
-  For linux
+Create a virtual environment:
 
-  ``` source navenv/bin/activate ```
+bash
+
+python -m venv navenv
+
+Activate the virtual environment:
+
+For Windows:
+
+bash
+
+navenv\Scripts\activate
+
+For Linux:
+
+bash
+
+source navenv/bin/activate
+
+Run the script with the desired image file:
+
+bash
+
+    python main.py --file [path to your image file]
+
+Example Usage:
+
+    To use the provided sample images:
+
+    bash
+
+python main.py --file "Assets/WhatsApp Image 2024-08-09 at 5.57.51 PM.jpeg"
+
+or
+
+bash
+
+    python main.py --file "Assets/WhatsApp Image 2024-08-09 at 5.57.52 PM.jpeg"
+
+vbnet
 
 
-#### Take file from Assets/WhatsApp Image 2024-08-09 at 5.57.51 PM.jpeg
-#### Take file from Assets/WhatsApp Image 2024-08-09 at 5.57.52 PM.jpeg
-python main.py --file [path of the file]
+This README section now includes the necessary steps to clone the repository, set up the environment, and run the script with example images.
